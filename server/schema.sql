@@ -8,12 +8,14 @@ USE chat;
 
 CREATE TABLE rooms (
   room_id INT AUTO_INCREMENT PRIMARY KEY,
-  roomname VARCHAR(30)
+  roomname VARCHAR(30),
+  UNIQUE KEY (roomname)
 );
 
 CREATE TABLE users (
   user_id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(30)
+  username VARCHAR(30),
+  UNIQUE KEY(username)
 );
 
 CREATE TABLE messages (
