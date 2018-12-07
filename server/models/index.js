@@ -1,19 +1,28 @@
-var db = require("../db").dbConnection;
-const Promise = require("bluebird");
+var db = require('../db').dbConnection;
+const Promise = require('bluebird');
 db.queryAsync = Promise.promisify(db.query);
+
+var defaultCorsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'access-control-allow-headers': 'content-type, accept',
+  'access-control-max-age': 10 // Seconds.
+};
+var headers = defaultCorsHeaders;
+headers['Content-Type'] = 'application/json';
 
 module.exports = {
   messages: {
-    get: function(req,res) {
+    get: function(req, res) {
 
       // SELECT messages.text,users.username,rooms.roomname  FROM messages,rooms,users where messages.room_id=rooms.room_id and messages.user_id=users.user_id
-      const messagesSelectQuery = `SELECT messages.text, users.username, rooms.roomname FROM 
+      const messagesSelectQuery = `SELECT messages.text, users.username, rooms.roomname, messages.message_id FROM 
                                   messages, rooms, users WHERE messages.room_id = rooms.room_id
                                   AND messages.user_id = users.user_id`;
       // this function queries the database to return all messages
       db.queryAsync(messagesSelectQuery)
         .then(result => {
-          console.log(result,'INSIDE THE MESSAGE SELECT');
+          res.writeHead(201, headers);
           res.end(JSON.stringify(result));
         });
 
@@ -62,14 +71,19 @@ module.exports = {
         
         // First escape the message
         const escapedMessage = db.escape(req.body.message);
+        console.log(req.body, '#############');
         // create the query string
         const messageInsertionQuery = `INSERT INTO messages (text, room_id, user_id) VALUES (${escapedMessage}, ${result[1]}, ${result[0]})`;
         db.queryAsync(messageInsertionQuery)
           .then(result => {
-            console.log(result);
-            res.end();
+            let responseObj = req.body;
+            // eslint-disable-next-line camelcase
+            responseObj.message_id = result.insertId;
+            res.writeHead(200, headers);
+            res.end(JSON.stringify(responseObj));
           }).catch(err => {
-            res.end();
+            res.writeHead(400, headers);
+            res.end(JSON.stringify(req.body));
             console.log(err);
           });
         // execute the query
@@ -78,29 +92,8 @@ module.exports = {
         // write code that submits the messages into the database
         // result will be an array of [userID , roomID]
       });
-
-      // const escapedMessage = db.escape(req.body.message);
-      // const messageInsertQuery = `INSERT messages (text) VALUES (${escapedMessage})`;
-      // db.query(messageInsertQuery, (err, result) => {
-      //   if (err) {
-      //     console.log(err);
-      //   } else {
-      //     console.log(result);
-      //     res.end();
-      //   }
-      // });
     } // a function which can be used to insert a message into the database
 
-    // ADD TO USER TO DATABASE
-    // IF ERROR RETURN USERNAME ID
-    // IF NO ERROR RETURN USERNAME ID
-
-    // ADD ROOMNAME TO DATABASE
-    // IF ERROR RETURN ROOMNAME ID
-    // IF NO ERROR RETURN ROOMNAME ID
-
-    // BECAUSE ABOVE ARE ASYNC WE NEED TO MAKE SURE THAT MESSAGES IS RAN LAST
-    // ADD MESSAGES WITH TEXT, ROOMNAME ID, USER ID
   },
 
   users: {
@@ -112,7 +105,7 @@ module.exports = {
       const userInsertQuery = `INSERT users (username) VALUES(${escapedUsername})`;
       db.query(userInsertQuery, (err, result) => {
         if (err) {
-          console.log("Duplicate Error");
+          console.log('Duplicate Error');
           res.end();
         } else {
           console.log(result);
