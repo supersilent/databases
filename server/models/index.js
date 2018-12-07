@@ -4,7 +4,23 @@ db.queryAsync = Promise.promisify(db.query);
 
 module.exports = {
   messages: {
-    get: function() {}, // a function which produces all the messages
+    get: function(req,res) {
+
+      // SELECT messages.text,users.username,rooms.roomname  FROM messages,rooms,users where messages.room_id=rooms.room_id and messages.user_id=users.user_id
+      const messagesSelectQuery = `SELECT messages.text, users.username, rooms.roomname FROM 
+                                  messages, rooms, users WHERE messages.room_id = rooms.room_id
+                                  AND messages.user_id = users.user_id`;
+      // this function queries the database to return all messages
+      db.queryAsync(messagesSelectQuery)
+        .then(result => {
+          console.log(result,'INSIDE THE MESSAGE SELECT');
+          res.end(JSON.stringify(result));
+        });
+
+      
+
+
+    }, // a function which produces all the messages
     post: function(req, res) {
       // PROMISE FOR USERNAME
       const escapedUsername = db.escape(req.body.username);
